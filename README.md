@@ -27,3 +27,40 @@ flowchart LR
 ```
 
 Jede Anfrage läuft in einer Transaktion, in der die API den Mandanten setzt. Ab da zeigt und akzeptiert die Datenbank nur noch Zeilen dieses Mandanten. Die Abfragen im Code enthalten absichtlich keinen Mandantenfilter. Die Tests zeigen, dass trotzdem nichts durchrutscht: Selbst ein `DELETE FROM buchungen` ohne Bedingung löscht nur die eigenen Zeilen.
+
+## API
+
+Die vollständige Beschreibung erzeugt FastAPI unter `/docs`.
+
+| Methode | Pfad | Zweck |
+|---|---|---|
+| POST | `/v1/buchungen` | bis zu 10.000 Buchungen hochladen |
+| DELETE | `/v1/buchungen?jahr=&monat=` | Zeitraum löschen, um ihn neu zu laden |
+| PUT | `/v1/budget` | Budget anlegen oder überschreiben |
+| GET | `/v1/kennzahlen?jahr=&monat=` | Deckungsbeitragsrechnung, gesamt und je Kostenstelle |
+| GET | `/v1/abweichungen?jahr=&monat=` | Ist gegen Budget, größte Abweichung zuerst |
+| GET | `/health`, `/ready` | Lebt der Prozess? Ist die Datenbank erreichbar? |
+
+Beispiel mit den Demodaten einer erfundenen Tischlerei (`scripts/demo_daten.py`):
+
+```bash
+curl -H "X-API-Key: $SCHLUESSEL" "http://localhost:8080/v1/kennzahlen?jahr=2025"
+```
+
+```json
+{
+  "jahr": 2025,
+  "monat": null,
+  "gesamt": {
+    "umsatz": 1046482.73,
+    "variable_kosten": 334830.14,
+    "deckungsbeitrag": 711652.59,
+    "db_quote": 0.68,
+    "fixkosten": 636930.43,
+    "betriebsergebnis": 74722.16,
+    "umsatzrendite": 0.0714
+  }
+}
+```
+
+Bei den Abweichungen steht ganz oben, dass die Werkstatt 22.240 € weniger Umsatz gemacht hat als geplant (−3,0 %) und das Material 11.504 € teurer war (+4,6 %). Beides ist als ungünstig markiert: Mehr Erlös als geplant ist günstig, mehr Kosten sind ungünstig.
