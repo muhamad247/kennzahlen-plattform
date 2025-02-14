@@ -64,3 +64,36 @@ curl -H "X-API-Key: $SCHLUESSEL" "http://localhost:8080/v1/kennzahlen?jahr=2025"
 ```
 
 Bei den Abweichungen steht ganz oben, dass die Werkstatt 22.240 € weniger Umsatz gemacht hat als geplant (−3,0 %) und das Material 11.504 € teurer war (+4,6 %). Beides ist als ungünstig markiert: Mehr Erlös als geplant ist günstig, mehr Kosten sind ungünstig.
+
+## Starten
+
+Lokal mit Docker, alles in einem Schritt:
+
+```bash
+docker compose up -d --build
+docker compose run --rm einrichten python -m scripts.mandant anlegen "Muster GmbH"
+python -m scripts.demo_daten --schluessel <Schlüssel aus der Zeile davor>
+```
+
+| Dienst | Adresse |
+|---|---|
+| API mit Dokumentation | http://localhost:8080/docs |
+| Grafana (Dashboard „Betrieb je Mandant“) | http://localhost:3000 |
+| Prometheus | http://localhost:9090 |
+
+Ausfalltest und Lasttest gegen den laufenden Stack:
+
+```bash
+python -m scripts.ausfalltest
+pip install -r requirements-dev.txt
+KENNZAHLEN_SCHLUESSEL=kz_... locust -f lasttest/locustfile.py --host http://localhost:8080 --headless -u 50 -r 10 -t 60s
+```
+
+In Azure (braucht ein eigenes Konto und kostet laufend Geld, in der kleinsten Variante grob geschätzt einige Euro pro Tag):
+
+```bash
+cd infra
+terraform init
+terraform apply -var subscription_id=... -var image=ghcr.io/<benutzer>/kennzahlen-plattform:1.0.0
+# danach einmal das Schema einspielen, den Befehl gibt Terraform aus
+```
