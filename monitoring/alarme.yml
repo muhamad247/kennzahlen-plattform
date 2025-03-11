@@ -1,0 +1,50 @@
+groups:
+  - name: kennzahlen
+    rules:
+      - alert: HoheFehlerquoteMandant
+        # Anteil der Serverfehler (5xx) je Mandant über 5 Minuten
+        expr: |
+          sum by (mandant) (rate(http_anfragen_total{status=~"5.."}[5m]))
+            / sum by (mandant) (rate(http_anfragen_total[5m]))
+          > 0.05
+        for: 5m
+        labels:
+          schwere: kritisch
+        annotations:
+          zusammenfassung: "Mehr als 5 % Serverfehler für {{ $labels.mandant }}"
+
+      - alert: InstanzAusgefallen
+        expr: up{job="kennzahlen"} == 0
+        for: 1m
+        labels:
+          schwere: warnung
+        annotations:
+          zusammenfassung: "Instanz {{ $labels.instance }} antwortet nicht. Die zweite trägt den Verkehr allein."
+
+      - alert: DatenbankNichtErreichbar
+        expr: max by (instance) (datenbank_bereit) == 0
+        for: 2m
+        labels:
+          schwere: kritisch
+        annotations:
+          zusammenfassung: "{{ $labels.instance }} erreicht die Datenbank nicht"
+
+      - alert: LangsameAntworten
+        # 95 % der Anfragen sollen in unter einer halben Sekunde beantwortet sein
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le, route) (rate(http_antwortzeit_sekunden_bucket{route=~"/v1/.*"}[5m])))
+          > 0.5
+        for: 10m
+        labels:
+          schwere: warnung
+        annotations:
+          zusammenfassung: "p95 der Antwortzeit auf {{ $labels.route }} über 500 ms"
+
+      - alert: MandantAmLimit
+        expr: sum by (mandant) (rate(ratelimit_abgelehnt_total[5m])) > 1
+        for: 15m
+        labels:
+          schwere: info
+        annotations:
+          zusammenfassung: "{{ $labels.mandant }} stößt dauerhaft an die Anfragebegrenzung"

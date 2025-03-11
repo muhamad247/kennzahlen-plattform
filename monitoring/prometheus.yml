@@ -1,0 +1,13 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - alarme.yml
+
+scrape_configs:
+  # Jede Instanz einzeln abfragen, nicht über den Load Balancer:
+  # sonst sieht man nicht, welche Instanz ausgefallen ist.
+  - job_name: kennzahlen
+    static_configs:
+      - targets: ["app1:8000", "app2:8000"]
