@@ -97,3 +97,16 @@ terraform init
 terraform apply -var subscription_id=... -var image=ghcr.io/<benutzer>/kennzahlen-plattform:1.0.0
 # danach einmal das Schema einspielen, den Befehl gibt Terraform aus
 ```
+
+## Was getestet ist
+
+GitHub Actions führt bei jedem Push vier Jobs aus:
+
+- **tests:** 49 Tests mit pytest gegen ein echtes PostgreSQL. Dazu gehören elf Tests zur Mandantentrennung direkt in der Datenbank: fremde Zeilen lesen, schreiben, ändern, löschen, sich selbst zuordnen und RLS abschalten scheitert. Außerdem Anmeldung, Schlüsseltausch, Eingabeprüfung, Kennzahlen gegen unabhängig nachgerechnete Werte, Anfragebegrenzung, Metriken und Logformat.
+- **monitoring:** Prometheus-Konfiguration prüfen und Unit-Tests der Alarmregeln: Fehlerquote eines Mandanten, Ausfall einer Instanz, langsame Antworten.
+- **terraform:** `fmt`, `validate` und `terraform test`. Die Tests ersetzen den Azure-Provider durch Attrappen und prüfen unter anderem, dass die Datenbank-URL nur aus dem Key Vault kommt und dass immer mindestens zwei Instanzen laufen.
+- **ausfalltest:** startet den ganzen Stack mit Docker Compose, beendet während laufender Anfragen eine Instanz hart und startet sie wieder. Bestanden ist der Test nur, wenn keine einzige Anfrage fehlschlägt.
+
+Dass die Tests Fehler wirklich finden, habe ich geprüft: Mit abgeschalteter Row-Level Security schlagen 12 Tests fehl, mit einer Datenbank-URL im Klartext der Terraform-Test, mit einer zu hohen Fehlerschwelle der Alarmtest.
+
+Lasttest, nur als grobe Orientierung: Eine einzelne Instanz auf einem Rechner mit zwei Kernen, den sie sich mit Datenbank und Lastgenerator teilt, schaffte rund 310 Anfragen pro Sekunde, p95 unter 80 ms, ohne Fehler. Mit der Standardbegrenzung (600 Anfragen pro Minute je Mandant) wurden bei derselben Last 87 % der Anfragen mit 429 abgelehnt. So soll es sein.

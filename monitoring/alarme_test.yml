@@ -1,0 +1,68 @@
+# Unit-Tests für die Alarmregeln: promtool test rules monitoring/alarme_test.yml
+rule_files:
+  - alarme.yml
+
+evaluation_interval: 1m
+
+tests:
+  # Mandant A hat 10 % Serverfehler, Mandant B keine: nur A löst aus
+  - interval: 1m
+    input_series:
+      - series: 'http_anfragen_total{mandant="A", route="/v1/kennzahlen", status="200"}'
+        values: "0+90x20"
+      - series: 'http_anfragen_total{mandant="A", route="/v1/kennzahlen", status="500"}'
+        values: "0+10x20"
+      - series: 'http_anfragen_total{mandant="B", route="/v1/kennzahlen", status="200"}'
+        values: "0+100x20"
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: HoheFehlerquoteMandant
+        exp_alerts: []
+      - eval_time: 15m
+        alertname: HoheFehlerquoteMandant
+        exp_alerts:
+          - exp_labels:
+              mandant: A
+              schwere: kritisch
+            exp_annotations:
+              zusammenfassung: "Mehr als 5 % Serverfehler für A"
+
+  # Eine von zwei Instanzen fällt nach 5 Minuten aus
+  - interval: 1m
+    input_series:
+      - series: 'up{job="kennzahlen", instance="app1:8000"}'
+        values: "1 1 1 1 1 0 0 0 0 0"
+      - series: 'up{job="kennzahlen", instance="app2:8000"}'
+        values: "1 1 1 1 1 1 1 1 1 1"
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: InstanzAusgefallen
+        exp_alerts: []
+      - eval_time: 7m
+        alertname: InstanzAusgefallen
+        exp_alerts:
+          - exp_labels:
+              job: kennzahlen
+              instance: "app1:8000"
+              schwere: warnung
+            exp_annotations:
+              zusammenfassung: "Instanz app1:8000 antwortet nicht. Die zweite trägt den Verkehr allein."
+
+  # Die meisten Anfragen dauern über eine Sekunde: p95 klar über 500 ms
+  - interval: 1m
+    input_series:
+      - series: 'http_antwortzeit_sekunden_bucket{mandant="A", route="/v1/abweichungen", le="0.5"}'
+        values: "0+1x20"
+      - series: 'http_antwortzeit_sekunden_bucket{mandant="A", route="/v1/abweichungen", le="1"}'
+        values: "0+2x20"
+      - series: 'http_antwortzeit_sekunden_bucket{mandant="A", route="/v1/abweichungen", le="+Inf"}'
+        values: "0+10x20"
+    alert_rule_test:
+      - eval_time: 16m
+        alertname: LangsameAntworten
+        exp_alerts:
+          - exp_labels:
+              route: /v1/abweichungen
+              schwere: warnung
+            exp_annotations:
+              zusammenfassung: "p95 der Antwortzeit auf /v1/abweichungen über 500 ms"
