@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 2s --health-timeout 5s --health-retries 30
+    env:
+      TEST_ADMIN_URL: postgresql://postgres:postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - run: ruff check .
+      - run: pytest -q
+
+  monitoring:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prometheus-Konfiguration und Alarmregeln prüfen
+        run: |
+          promtool() { docker run --rm -v "$PWD/monitoring:/m" --entrypoint promtool prom/prometheus:v3.2.1 "$@"; }
+          promtool check config /m/prometheus.yml
+          promtool test rules /m/alarme_test.yml
+      - name: Grafana-Dashboard ist gültiges JSON
+        run: python -m json.tool monitoring/grafana/dashboards/mandanten.json > /dev/null
+
+  terraform:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform fmt -check -recursive
+      - run: terraform init -backend=false
+      - run: terraform validate
+      - run: terraform test
+
+  ausfalltest:
+    needs: tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: docker compose up -d --build
+      - run: python -m scripts.ausfalltest
+      - name: Logs bei Fehler
+        if: failure()
+        run: docker compose logs --no-color --tail 200
+      - if: always()
+        run: docker compose down -v

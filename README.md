@@ -110,3 +110,12 @@ GitHub Actions führt bei jedem Push vier Jobs aus:
 Dass die Tests Fehler wirklich finden, habe ich geprüft: Mit abgeschalteter Row-Level Security schlagen 12 Tests fehl, mit einer Datenbank-URL im Klartext der Terraform-Test, mit einer zu hohen Fehlerschwelle der Alarmtest.
 
 Lasttest, nur als grobe Orientierung: Eine einzelne Instanz auf einem Rechner mit zwei Kernen, den sie sich mit Datenbank und Lastgenerator teilt, schaffte rund 310 Anfragen pro Sekunde, p95 unter 80 ms, ohne Fehler. Mit der Standardbegrenzung (600 Anfragen pro Minute je Mandant) wurden bei derselben Last 87 % der Anfragen mit 429 abgelehnt. So soll es sein.
+
+## Grenzen
+
+- **Netzwerk:** Datenbank und API liegen in Azure nicht in einem eigenen virtuellen Netz. Die Datenbank ist für alle Azure-Dienste erreichbar, geschützt nur durch das Passwort. Für Produktion gehört sie hinter einen privaten Endpunkt (ADR 0005).
+- **Terraform-State:** Er enthält die erzeugten Passwörter und muss verschlüsselt mit eingeschränktem Zugriff gespeichert werden.
+- **Anfragebegrenzung:** Sie zählt je Instanz. Bei zwei Instanzen ist das tatsächliche Limit bis zu doppelt so hoch (ADR 0004).
+- **Datenbank:** Sie ist ohne `db_hochverfuegbar` ein Single Point of Failure.
+- **Deployment:** Ein echtes Deployment nach Azure habe ich nicht gemacht, die Terraform-Konfiguration ist nur validiert und mit Attrappen getestet.
+- **Rechte:** Es gibt keine Rechte innerhalb eines Mandanten (z. B. nur lesen) und keine Oberfläche, nur die API.
