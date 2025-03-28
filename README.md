@@ -119,3 +119,23 @@ Lasttest, nur als grobe Orientierung: Eine einzelne Instanz auf einem Rechner mi
 - **Datenbank:** Sie ist ohne `db_hochverfuegbar` ein Single Point of Failure.
 - **Deployment:** Ein echtes Deployment nach Azure habe ich nicht gemacht, die Terraform-Konfiguration ist nur validiert und mit Attrappen getestet.
 - **Rechte:** Es gibt keine Rechte innerhalb eines Mandanten (z. B. nur lesen) und keine Oberfläche, nur die API.
+
+## Projektstruktur
+
+```
+app/
+  main.py          Endpunkte, Anmeldung, Messung je Anfrage
+  datenbank.py     Verbindungspool, Mandant pro Transaktion setzen
+  kennzahlen.py    Deckungsbeitragsrechnung und Abweichungen (reine Funktionen)
+  ratelimit.py     Token Bucket je Mandant
+  beobachtung.py   Prometheus-Metriken, JSON-Logs
+  verwaltung.py    Schema einspielen, Mandanten und Schlüssel anlegen
+db/schema.sql      Tabellen, Row-Level Security, Rechte der Anwendung
+scripts/           Einrichten, Mandanten verwalten, Demodaten, Ausfalltest
+monitoring/        Prometheus, Alarmregeln mit Tests, Grafana-Dashboard
+infra/             Terraform für Azure, mit Tests
+deploy/nginx.conf  Load Balancer
+lasttest/          Locust
+docs/adr/          Architekturentscheidungen
+tests/             pytest
+```
