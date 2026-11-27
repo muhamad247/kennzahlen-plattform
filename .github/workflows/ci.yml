@@ -18,8 +18,8 @@ jobs:
     env:
       TEST_ADMIN_URL: postgresql://postgres:postgres@localhost:5432/postgres
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
           cache: pip
@@ -30,10 +30,10 @@ jobs:
   monitoring:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Prometheus-Konfiguration und Alarmregeln prüfen
         run: |
-          promtool() { docker run --rm -v "$PWD/monitoring:/m" --entrypoint promtool prom/prometheus:v3.2.1 "$@"; }
+          promtool() { docker run --rm -v "$PWD/monitoring:/m" --entrypoint promtool prom/prometheus:v3.16.0 "$@"; }
           promtool check config /m/prometheus.yml
           promtool test rules /m/alarme_test.yml
       - name: Grafana-Dashboard ist gültiges JSON
@@ -45,8 +45,8 @@ jobs:
       run:
         working-directory: infra
     steps:
-      - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
       - run: terraform fmt -check -recursive
       - run: terraform init -backend=false
       - run: terraform validate
@@ -56,8 +56,8 @@ jobs:
     needs: tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
       - run: docker compose up -d --build
