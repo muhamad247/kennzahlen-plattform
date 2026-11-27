@@ -115,7 +115,7 @@ Lasttest, nur als grobe Orientierung: Eine einzelne Instanz auf einem Rechner mi
 
 - **Netzwerk:** Datenbank und API liegen in Azure nicht in einem eigenen virtuellen Netz. Die Datenbank ist für alle Azure-Dienste erreichbar, geschützt nur durch das Passwort. Für Produktion gehört sie hinter einen privaten Endpunkt (ADR 0005).
 - **Terraform-State:** Er enthält die erzeugten Passwörter und muss verschlüsselt mit eingeschränktem Zugriff gespeichert werden.
-- **Anfragebegrenzung:** Sie zählt je Instanz. Bei zwei Instanzen ist das tatsächliche Limit bis zu doppelt so hoch (ADR 0004).
+- **Anfragebegrenzung:** Sie zählt je Instanz. Bei zwei Instanzen ist das tatsächliche Limit bis zu doppelt so hoch. Fällt eine Instanz aus, halbiert es sich für jeden Mandanten. Das hat der erste Lauf des Ausfalltests gezeigt (ADR 0004).
 - **Datenbank:** Sie ist ohne `db_hochverfuegbar` ein Single Point of Failure.
 - **Deployment:** Ein echtes Deployment nach Azure habe ich nicht gemacht, die Terraform-Konfiguration ist nur validiert und mit Attrappen getestet.
 - **Rechte:** Es gibt keine Rechte innerhalb eines Mandanten (z. B. nur lesen) und keine Oberfläche, nur die API.

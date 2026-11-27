@@ -19,6 +19,10 @@ from scripts.demo_daten import erzeugen, senden
 
 URL = "http://localhost:8080"
 DAUER_S, AUSFALL_S, NEUSTART_S = 40, 10, 25
+# Etwa 5 Anfragen pro Sekunde, deutlich unter dem Limit von 10 pro Sekunde und Instanz.
+# Sonst misst der Test die Anfragebegrenzung statt des Ausfalls: Fällt eine Instanz aus,
+# trägt die andere den ganzen Verkehr und das Limit eines Mandanten halbiert sich (ADR 0004).
+ABSTAND_S = 0.2
 
 
 def compose(*args: str) -> str:
@@ -94,7 +98,7 @@ def main() -> None:
         status, instanz = anfrage(schluessel)
         phasen[phase][status] += 1
         instanzen[phase].add(instanz)
-        time.sleep(0.05)
+        time.sleep(ABSTAND_S)
 
     fehler = 0
     for phase, zaehler in phasen.items():
